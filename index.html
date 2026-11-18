@@ -1,0 +1,216 @@
+<!DOCTYPE html>
+<html lang="tr" data-theme="dark">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>StockFlow | Akıllı Stok & Fire Yönetimi</title>
+    <!-- Modern Font: Plus Jakarta Sans & Inter -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600&family=Plus+Jakarta+Sans:wght@600;700&display=swap" rel="stylesheet">
+    <!-- Supabase CDN -->
+    <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+    <!-- Üst Gezinme Çubuğu -->
+    <header class="navbar">
+        <div class="nav-container">
+            <div class="brand">
+                <div class="brand-logo">
+                    <svg width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5" stroke-linecap="round" stroke-linejoin="round">
+                        <path d="M21 16V8a2 2 0 0 0-1-1.73l-7-4a2 2 0 0 0-2 0l-7 4A2 2 0 0 0 3 8v8a2 2 0 0 0 1 1.73l7 4a2 2 0 0 0 2 0l7-4A2 2 0 0 0 21 16z"></path>
+                        <polyline points="3.27 6.96 12 12.01 20.73 6.96"></polyline>
+                        <line x1="12" y1="22.08" x2="12" y2="12"></line>
+                    </svg>
+                </div>
+                <div>
+                    <h1>StockFlow</h1>
+                    <span class="subtitle">Stok & Fire Analiz Paneli</span>
+                </div>
+            </div>
+
+            <div class="nav-actions">
+                <div id="connection-status" class="status-pill demo">
+                    <span class="dot"></span>
+                    <span id="status-text">Demo Modu</span>
+                </div>
+                <button id="theme-toggle" class="icon-btn" aria-label="Temayı Değiştir" title="Açık / Koyu Tema">
+                    <!-- Güneş İkonu (Dark modda görünür) -->
+                    <svg class="sun-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <circle cx="12" cy="12" r="5"></circle>
+                        <line x1="12" y1="1" x2="12" y2="3"></line>
+                        <line x1="12" y1="21" x2="12" y2="23"></line>
+                        <line x1="4.22" y1="4.22" x2="5.64" y2="5.64"></line>
+                        <line x1="18.36" y1="18.36" x2="19.78" y2="19.78"></line>
+                        <line x1="1" y1="12" x2="3" y2="12"></line>
+                        <line x1="21" y1="12" x2="23" y2="12"></line>
+                        <line x1="4.22" y1="19.78" x2="5.64" y2="18.36"></line>
+                        <line x1="18.36" y1="5.64" x2="19.78" y2="4.22"></line>
+                    </svg>
+                    <!-- Ay İkonu (Light modda görünür) -->
+                    <svg class="moon-icon" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2">
+                        <path d="M21 12.79A9 9 0 1 1 11.21 3 7 7 0 0 0 21 12.79z"></path>
+                    </svg>
+                </button>
+            </div>
+        </div>
+    </header>
+
+    <!-- Ana İçerik Kapsayıcısı -->
+    <main class="container">
+        
+        <!-- 1. Bölüm: Özet Metrikler (KPI) -->
+        <section class="kpi-grid">
+            <div class="kpi-card">
+                <span class="kpi-label">Toplam Fire Maliyeti</span>
+                <strong class="kpi-value text-danger" id="kpi-toplam-fire">₺0,00</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Kritik Stoktaki Ürün</span>
+                <strong class="kpi-value text-warning" id="kpi-kritik-sayi">0 Ürün</strong>
+            </div>
+            <div class="kpi-card">
+                <span class="kpi-label">Aktif İşletme / Kafe</span>
+                <strong class="kpi-value" id="kpi-kafe-sayi">0 Nokta</strong>
+            </div>
+        </section>
+
+        <!-- 2. Bölüm: Hızlı Fire Kayıt Formu -->
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Yeni Fire Kaydı Oluştur</h2>
+                    <p>Günlük zayiat ve son kullanma tarihi geçen ürünleri kaydedin.</p>
+                </div>
+            </div>
+            <form id="fire-form" class="form-grid">
+                <div class="form-group">
+                    <label for="kafe-secimi">İşletme / Kafe</label>
+                    <select id="kafe-secimi" required>
+                        <option value="" disabled selected>Kafe seçiniz...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="urun-secimi">Ürün Adı</label>
+                    <select id="urun-secimi" required>
+                        <option value="" disabled selected>Ürün seçiniz...</option>
+                    </select>
+                </div>
+
+                <div class="form-group">
+                    <label for="fire-miktari">Fire Miktarı</label>
+                    <input type="number" id="fire-miktari" step="0.01" min="0.01" placeholder="Örn: 2.5" required>
+                </div>
+
+                <div class="form-group">
+                    <label for="fire-nedeni">Fire Nedeni</label>
+                    <select id="fire-nedeni" required>
+                        <option value="Son Kullanma Tarihi">Son Kullanma Tarihi (SKT)</option>
+                        <option value="Bozulma / Küflenme">Bozulma / Küflenme</option>
+                        <option value="Hazırlık Hatası">Hazırlık / Üretim Hatası</option>
+                        <option value="Dökülme / Kırılma">Dökülme / Kırılma</option>
+                    </select>
+                </div>
+
+                <div class="form-group form-action">
+                    <button type="submit" class="btn-primary" id="submit-btn">
+                        <svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.5">
+                            <line x1="12" y1="5" x2="12" y2="19"></line>
+                            <line x1="5" y1="12" x2="19" y2="12"></line>
+                        </svg>
+                        Fire Kaydet
+                    </button>
+                </div>
+            </form>
+        </section>
+
+        <!-- 3. Bölüm: View Raporu (Ürün Bazlı Fire Maliyeti) -->
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Ürün Bazlı Fire Maliyet Analizi</h2>
+                    <p>Veritabanı View (<code>v_urun_fire_maliyeti</code>) üzerinden hesaplanan güncel zarar tablosu.</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ürün Adı</th>
+                            <th>Toplam Fire Miktarı</th>
+                            <th>Birim Maliyet</th>
+                            <th>Toplam Fire Zararı</th>
+                            <th>Maliyet Etkisi</th>
+                        </tr>
+                    </thead>
+                    <tbody id="rapor-tablosu">
+                        <!-- JS ile dinamik doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 4. Bölüm: Canlı Stok Durumu & Kritik Eşik Takibi -->
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Güncel Stok Durumu</h2>
+                    <p>Kritik eşik değerine göre otomatik durum rozetleri ile anlık envanter.</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Ürün Kodu / Adı</th>
+                            <th>Kafe / Şube</th>
+                            <th>Mevcut Stok</th>
+                            <th>Kritik Eşik</th>
+                            <th>Durum</th>
+                        </tr>
+                    </thead>
+                    <tbody id="stok-tablosu">
+                        <!-- JS ile dinamik doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+        <!-- 5. Bölüm: Geçmiş Fire Kayıtları ve Silme İşlemi -->
+        <section class="card">
+            <div class="card-header">
+                <div>
+                    <h2>Son Fire Kayıtları</h2>
+                    <p>Sisteme işlenen son hareketler. Hatalı girişleri silebilirsiniz.</p>
+                </div>
+            </div>
+            <div class="table-responsive">
+                <table>
+                    <thead>
+                        <tr>
+                            <th>Tarih</th>
+                            <th>Kafe</th>
+                            <th>Ürün</th>
+                            <th>Miktar</th>
+                            <th>Neden</th>
+                            <th class="text-right">İşlem</th>
+                        </tr>
+                    </thead>
+                    <tbody id="gecmis-tablosu">
+                        <!-- JS ile dinamik doldurulacak -->
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Bildirim Toast -->
+    <div id="toast" class="toast">İşlem başarılı!</div>
+
+    <script src="app.js"></script>
+</body>
+</html>
+
