@@ -6,6 +6,6 @@
 // Boş bırakırsanız panel Demo Modu'nda açılır; bağlantıyı arayüzdeki
 // "Bağlantı ayarları" penceresinden de yapabilirsiniz (tarayıcıda saklanır).
 window.STOCKFLOW_CONFIG = {
-    supabaseUrl: '',
-    supabaseAnonKey: ''
+    supabaseUrl: 'https://wvayzqwmnrkstvhqjaob.supabase.co',
+    supabaseAnonKey: 'sb_publishable_5sDefSMXvvbFQKplh75Waw_XttY7exX'
 };

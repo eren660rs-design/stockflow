@@ -41,7 +41,7 @@ const DB = (() => {
     }
 
     async function ping(client) {
-        const { error } = await client.from('isletmeler').select('id', { count: 'exact', head: true });
+        const { error } = await client.from('v_fire_detay').select('id').limit(1);
         if (error) throw new Error(friendlyError(error));
     }
 
@@ -80,10 +80,14 @@ const DB = (() => {
     }
 
     function friendlyError(error) {
-        const msg = (error && (error.message || error.details)) || String(error);
+        const msg = (error && (error.message || error.details || error.hint || error.code)) ||
+            (typeof error === 'string' ? error : 'Bilinmeyen hata');
         if (/Yetersiz stok|silinemez/.test(msg)) return msg;
         if (/relation .* does not exist|Could not find the table/i.test(msg)) {
             return 'Tablolar bulunamadı. Önce sql/01_schema.sql dosyasını Supabase SQL Editor\'da çalıştırın.';
+        }
+        if (/permission denied/i.test(msg)) {
+            return 'Tablolara erişim izni yok. sql/01_schema.sql dosyasını Supabase SQL Editor\'da çalıştırın.';
         }
         if (/Invalid API key|JWT/i.test(msg)) return 'API anahtarı geçersiz.';
         if (/Failed to fetch|NetworkError/i.test(msg)) return 'Supabase adresine ulaşılamadı.';
@@ -120,9 +124,9 @@ const DB = (() => {
         const day = 86400000;
         const ago = d => new Date(Date.now() - d * day).toISOString();
         const isletmeler = [
-            { id: 1, ad: 'Merkez Kütüphane Kafe', konum: 'A Blok Giriş' },
-            { id: 2, ad: 'Mühendislik Kantin & Kafe', konum: 'B Blok Zemin' },
-            { id: 3, ad: 'Bahçe Pastane & Kahve', konum: 'Kampüs Meydanı' }
+            { id: 1, ad: 'Febrero Kafe', konum: 'Teras' },
+            { id: 2, ad: 'Casuel Bakery', konum: 'Balçova' },
+            
         ];
         const kategoriler = [
             { id: 1, kategori_adi: 'Süt ve Süt Ürünleri' },
@@ -152,14 +156,14 @@ const DB = (() => {
             [2, 1, 'GIRIS', 60, 19, 'Haftalık süt teslimatı'], [2, 1, 'GIRIS', 30, 8, 'Ek sipariş'],
             [2, 2, 'GIRIS', 15, 16], [2, 4, 'GIRIS', 35, 13], [2, 4, 'GIRIS', 30, 5],
             [2, 10, 'GIRIS', 30, 10], [2, 7, 'GIRIS', 5, 17, 'Kavurucu teslimatı'],
-            [3, 6, 'GIRIS', 25, 15], [3, 6, 'GIRIS', 15, 4], [3, 5, 'GIRIS', 24, 14], [3, 5, 'GIRIS', 12, 5],
-            [3, 8, 'GIRIS', 6, 20], [3, 3, 'GIRIS', 30, 12, 'Fırın siparişi'], [3, 10, 'GIRIS', 25, 9],
+            [2, 6, 'GIRIS', 25, 15], [2, 6, 'GIRIS', 15, 4], [2, 5, 'GIRIS', 24, 14], [2, 5, 'GIRIS', 12, 5],
+            [2, 8, 'GIRIS', 6, 20], [2, 3, 'GIRIS', 30, 12, 'Fırın siparişi'], [2, 10, 'GIRIS', 25, 9],
             [1, 1, 'TUKETIM', 30, 15], [1, 1, 'TUKETIM', 41, 5], [1, 3, 'SATIS', 30, 10], [1, 3, 'SATIS', 26, 4],
             [1, 5, 'SATIS', 12, 6], [1, 7, 'TUKETIM', 3.5, 8], [1, 9, 'TUKETIM', 9, 4],
             [2, 1, 'TUKETIM', 48, 12], [2, 1, 'TUKETIM', 20, 3], [2, 2, 'TUKETIM', 6, 7],
             [2, 4, 'SATIS', 22, 9], [2, 4, 'SATIS', 20, 2], [2, 10, 'SATIS', 18, 3], [2, 7, 'TUKETIM', 2.5, 6],
-            [3, 6, 'SATIS', 15, 10], [3, 6, 'SATIS', 10, 2], [3, 5, 'SATIS', 16, 8], [3, 5, 'SATIS', 9, 1],
-            [3, 8, 'TUKETIM', 2, 9], [3, 3, 'SATIS', 24, 6], [3, 10, 'SATIS', 14, 3]
+            [2, 6, 'SATIS', 15, 10], [2, 6, 'SATIS', 10, 2], [2, 5, 'SATIS', 16, 8], [2, 5, 'SATIS', 9, 1],
+            [2, 8, 'TUKETIM', 2, 9], [2, 3, 'SATIS', 24, 6], [2, 10, 'SATIS', 14, 3]
         ].map(([isletme_id, urun_id, hareket_tipi, miktar, d, aciklama]) =>
             ({ id: ++hid, isletme_id, urun_id, hareket_tipi, miktar, islem_tarihi: ago(d), aciklama: aciklama || null }));
 
@@ -177,10 +181,10 @@ const DB = (() => {
             [2, 4, 8, 'GUN_SONU_KALAN', 'Gün sonu bayatlayan sandviçler', 8],
             [2, 4, 4, 'GUN_SONU_KALAN', null, 1],
             [2, 10, 4, 'GUN_SONU_KALAN', null, 2],
-            [3, 6, 4, 'BOZULMA', 'Krema bozulması', 9],
-            [3, 5, 5, 'GUN_SONU_KALAN', 'Hafta sonu kalan dilimler', 6],
-            [3, 8, 1.5, 'SKT_GECTI', 'Açılmış şişe SKT geçti', 3],
-            [3, 3, 6, 'GUN_SONU_KALAN', null, 5]
+            [2, 6, 4, 'BOZULMA', 'Krema bozulması', 9],
+            [2, 5, 5, 'GUN_SONU_KALAN', 'Hafta sonu kalan dilimler', 6],
+            [2, 8, 1.5, 'SKT_GECTI', 'Açılmış şişe SKT geçti', 3],
+            [2, 3, 6, 'GUN_SONU_KALAN', null, 5]
         ].map(([isletme_id, urun_id, fire_miktari, fire_nedeni, aciklama, d]) =>
             ({ id: ++fid, isletme_id, urun_id, fire_miktari, fire_nedeni, aciklama, kayit_tarihi: ago(d) }));
 
@@ -342,10 +346,81 @@ const DB = (() => {
         else await q(sb.from('urunler').insert(rec));
     }
 
+    // Toplu ürün içe aktarma (Excel / CSV)
+    // items: [{ urun_adi, kategori_adi, birim, birim_maliyet, kritik_stok_esigi,
+    //           existingId?: number, stok?: { isletme_id, miktar } }]
+    async function importUrunler(items, aciklama = 'Excel içe aktarma') {
+        const result = { kategori: 0, eklendi: 0, guncellendi: 0, stok: 0 };
+        const katNames = [...new Set(items.map(i => i.kategori_adi))];
+        const key = s => s.toLocaleLowerCase('tr').trim();
+
+        if (mode !== 'live') {
+            const kmap = new Map(demo.kategoriler.map(k => [key(k.kategori_adi), k.id]));
+            katNames.forEach(n => {
+                if (!kmap.has(key(n))) {
+                    const id = Math.max(0, ...demo.kategoriler.map(k => k.id)) + 1;
+                    demo.kategoriler.push({ id, kategori_adi: n });
+                    kmap.set(key(n), id);
+                    result.kategori++;
+                }
+            });
+            items.forEach(i => {
+                const rec = { urun_adi: i.urun_adi, kategori_id: kmap.get(key(i.kategori_adi)), birim: i.birim,
+                              birim_maliyet: i.birim_maliyet, kritik_stok_esigi: i.kritik_stok_esigi };
+                let id = i.existingId;
+                if (id) { Object.assign(demo.urunler.find(u => u.id === id), rec); result.guncellendi++; }
+                else { id = ++demo.next.u; demo.urunler.push({ id, ...rec }); result.eklendi++; }
+                if (i.stok) {
+                    demo.hareketler.push({ id: ++demo.next.h, isletme_id: i.stok.isletme_id, urun_id: id, hareket_tipi: 'GIRIS',
+                                           miktar: i.stok.miktar, aciklama, islem_tarihi: new Date().toISOString() });
+                    result.stok++;
+                }
+            });
+            return result;
+        }
+
+        // 1) Eksik kategoriler
+        const mevcut = await q(sb.from('kategoriler').select('id, kategori_adi'));
+        const kmap = new Map(mevcut.map(k => [key(k.kategori_adi), k.id]));
+        const yeniKat = katNames.filter(n => !kmap.has(key(n)));
+        if (yeniKat.length) {
+            const added = await q(sb.from('kategoriler').insert(yeniKat.map(kategori_adi => ({ kategori_adi }))).select('id, kategori_adi'));
+            added.forEach(k => kmap.set(key(k.kategori_adi), k.id));
+            result.kategori = added.length;
+        }
+        const toRec = i => ({ urun_adi: i.urun_adi, kategori_id: kmap.get(key(i.kategori_adi)), birim: i.birim,
+                              birim_maliyet: i.birim_maliyet, kritik_stok_esigi: i.kritik_stok_esigi });
+
+        // 2) Yeni ürünler (tek istekte)
+        const yeni = items.filter(i => !i.existingId);
+        const idOf = new Map(items.filter(i => i.existingId).map(i => [i, i.existingId]));
+        if (yeni.length) {
+            const added = await q(sb.from('urunler').insert(yeni.map(toRec)).select('id'));
+            yeni.forEach((i, n) => idOf.set(i, added[n].id));
+            result.eklendi = added.length;
+        }
+
+        // 3) Mevcut ürünlerin güncellenmesi
+        for (const i of items.filter(x => x.existingId)) {
+            await q(sb.from('urunler').update(toRec(i)).eq('id', i.existingId));
+            result.guncellendi++;
+        }
+
+        // 4) Başlangıç stoğu → giriş hareketi
+        const stoklar = items.filter(i => i.stok).map(i => ({
+            isletme_id: i.stok.isletme_id, urun_id: idOf.get(i), hareket_tipi: 'GIRIS', miktar: i.stok.miktar, aciklama
+        }));
+        if (stoklar.length) {
+            await q(sb.from('stok_hareketleri').insert(stoklar));
+            result.stok = stoklar.length;
+        }
+        return result;
+    }
+
     return {
         init, connect, disconnect, subscribe, readConfig,
         get mode() { return mode; },
         get lastError() { return lastError; },
-        loadAll, addFire, deleteFire, addHareket, deleteHareket, saveUrun
+        loadAll, addFire, deleteFire, addHareket, deleteHareket, saveUrun, importUrunler
     };
 })();

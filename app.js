@@ -25,7 +25,6 @@ const PAGES = {
     hareket: { title: 'Stok Hareketleri', sub: 'Giriş, satış ve tüketim kayıtları' },
     urun:    { title: 'Ürünler',          sub: 'Ürün tanımları, maliyetler ve eşik değerleri' }
 };
-const DAY = 86400000;
 
 // ---------- durum ----------
 const state = {
@@ -49,43 +48,13 @@ function savePrefs() {
     try { localStorage.setItem(PREFS_KEY, JSON.stringify({ isletme: state.isletme, period: state.period })); } catch (_) {}
 }
 
-// ---------- yardımcılar ----------
-const $ = (s, el = document) => el.querySelector(s);
-const $$ = (s, el = document) => [...el.querySelectorAll(s)];
-const esc = v => String(v ?? '').replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
-const tl = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', minimumFractionDigits: 2, maximumFractionDigits: 2 });
-const tl0 = new Intl.NumberFormat('tr-TR', { style: 'currency', currency: 'TRY', maximumFractionDigits: 0 });
-const nf = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 2 });
-const pf = new Intl.NumberFormat('tr-TR', { maximumFractionDigits: 1, minimumFractionDigits: 1 });
-const dtf = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short', hour: '2-digit', minute: '2-digit' });
-const df = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'short' });
-const dfl = new Intl.DateTimeFormat('tr-TR', { day: 'numeric', month: 'long', weekday: 'long' });
-const fmtTL = v => tl.format(v || 0);
-const fmtNum = v => nf.format(v || 0);
-const icon = (id, cls = '') => `<svg class="${cls}"><use href="#i-${id}"/></svg>`;
-const sum = (arr, f) => arr.reduce((a, x) => a + (typeof f === 'function' ? f(x) : x[f]) , 0);
-const dayKey = d => { const x = new Date(d); return `${x.getFullYear()}-${String(x.getMonth() + 1).padStart(2, '0')}-${String(x.getDate()).padStart(2, '0')}`; };
-const startOfToday = () => { const d = new Date(); d.setHours(0, 0, 0, 0); return d.getTime(); };
-const norm = s => String(s ?? '').toLocaleLowerCase('tr');
-
-function relTime(iso) {
-    const diff = Date.now() - new Date(iso).getTime();
-    const m = Math.round(diff / 60000);
-    if (m < 1) return 'şimdi';
-    if (m < 60) return `${m} dk önce`;
-    const h = Math.round(m / 60);
-    if (h < 24) return `${h} sa önce`;
-    const d = Math.round(h / 24);
-    if (d < 7) return `${d} gün önce`;
-    return df.format(new Date(iso));
-}
-
+// ---------- sayfa yardımcıları ----------
 function periodRange(days = state.period) {
     if (!days) return { since: -Infinity, prevSince: null };
     const since = startOfToday() - (days - 1) * DAY;
     return { since, prevSince: since - days * DAY };
 }
-const byIsletme = rows => state.isletme === 'all' ? rows : rows.filter(r => String(r.isletme_id) === String(state.isletme));
+const byIsletme = rows => state.isletme === 'all' ? rows : rows.filter(r => sameId(r.isletme_id, state.isletme));
 const inPeriod = (rows, field) => { const { since } = periodRange(); return rows.filter(r => new Date(r[field]).getTime() >= since); };
 const periodLabel = () => state.period ? `Son ${state.period} gün` : 'Tüm zamanlar';
 
@@ -108,6 +77,26 @@ function bindSort(root, pageState, rerender) {
         rerender();
     }));
 }
+// Arama kutusu: her tuşta sayfa yeniden çizilir, odak ve imleç korunur
+function bindSearch(root, id, pageState, rerender) {
+    $('#' + id, root).addEventListener('input', e => {
+        pageState.q = e.target.value;
+        rerender();
+        const input = $('#' + id);
+        input.focus();
+        input.setSelectionRange(input.value.length, input.value.length);
+    });
+}
+
+// Filtre çipleri: [[değer, etiket], ...]
+function chipBar(options, active, counts) {
+    return `<div class="chips">${options.map(([v, l]) =>
+        `<button class="chip ${active === v ? 'active' : ''}" data-chip="${v}">${l}<span class="c">${counts[v] ?? 0}</span></button>`).join('')}</div>`;
+}
+function bindChips(root, pageState, field, rerender) {
+    $$('[data-chip]', root).forEach(b => b.addEventListener('click', () => { pageState[field] = b.dataset.chip; rerender(); }));
+}
+
 function emptyState(ic, title, text, action = '') {
     return `<div class="empty"><div class="empty-icon">${icon(ic)}</div><h4>${esc(title)}</h4><p>${esc(text)}</p>${action}</div>`;
 }
@@ -142,13 +131,13 @@ async function reload({ silent = false } = {}) {
     btn.classList.add('spinning');
     try {
         state.data = await DB.loadAll();
-        if (state.isletme !== 'all' && !state.data.isletmeler.some(i => String(i.id) === String(state.isletme))) state.isletme = 'all';
+        if (state.isletme !== 'all' && !state.data.isletmeler.some(i => sameId(i.id, state.isletme))) state.isletme = 'all';
         renderShell();
         render();
     } catch (e) {
         if (!silent) toast(e.message, 'error');
         if (!state.data) $('#content').innerHTML = `<div class="card">${emptyState('alert', 'Veriler yüklenemedi', e.message,
-            '<button class="btn btn-secondary" onclick="openConnModal()">Bağlantı ayarları</button>')}</div>`;
+            '<button class="btn btn-secondary" data-action="open-conn">Bağlantı ayarları</button>')}</div>`;
     } finally {
         loading = false;
         btn.classList.remove('spinning');
@@ -191,13 +180,13 @@ function renderConn() {
         $('#conn-title').textContent = 'Bağlantı hatası';
         $('#conn-sub').textContent = 'Demo verisi gösteriliyor';
         banner.className = 'banner error';
-        banner.innerHTML = `${icon('alert')}<span><strong>Supabase'e bağlanılamadı:</strong> ${esc(DB.lastError)}</span><button class="btn btn-sm btn-secondary" onclick="openConnModal()">Ayarlar</button>`;
+        banner.innerHTML = `${icon('alert')}<span><strong>Supabase'e bağlanılamadı:</strong> ${esc(DB.lastError)}</span><button class="btn btn-sm btn-secondary" data-action="open-conn">Ayarlar</button>`;
         banner.hidden = false;
     } else {
         $('#conn-title').textContent = 'Demo Modu';
         $('#conn-sub').textContent = 'Değişiklikler kaydedilmez';
         banner.className = 'banner demo';
-        banner.innerHTML = `${icon('plug')}<span><strong>Demo modundasınız.</strong> Örnek veriler gösteriliyor; sayfayı yenileyince değişiklikler sıfırlanır.</span><button class="btn btn-sm btn-secondary" onclick="openConnModal()">Supabase'e bağlan</button>`;
+        banner.innerHTML = `${icon('plug')}<span><strong>Demo modundasınız.</strong> Örnek veriler gösteriliyor; sayfayı yenileyince değişiklikler sıfırlanır.</span><button class="btn btn-sm btn-secondary" data-action="open-conn">Supabase'e bağlan</button>`;
         banner.hidden = false;
     }
 }
@@ -259,7 +248,7 @@ function renderGenel(root) {
 
     root.innerHTML = `
         <div class="section-bar">
-            <h2>${esc(state.isletme === 'all' ? 'Tüm şubeler' : d.isletmeler.find(i => String(i.id) === String(state.isletme))?.ad)} <span class="faint" style="font-weight:500">· ${periodLabel()}</span></h2>
+            <h2>${esc(state.isletme === 'all' ? 'Tüm şubeler' : d.isletmeler.find(i => sameId(i.id, state.isletme))?.ad)} <span class="faint" style="font-weight:500">· ${periodLabel()}</span></h2>
             ${periodControl()}
         </div>
 
@@ -517,8 +506,7 @@ function renderFire(root) {
                 base.length ? 'Arama veya filtreyi değiştirmeyi deneyin.' : 'Yeni bir kayıt oluşturarak başlayın.')}
         </div>`;
 
-    const fq = $('#fq', root);
-    fq.addEventListener('input', () => { ps.q = fq.value; renderFire(root); const n = $('#fq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    bindSearch(root, 'fq', ps, () => renderFire(root));
     $('#fn', root).addEventListener('change', e => { ps.neden = e.target.value; renderFire(root); });
     $('#fire-add', root).addEventListener('click', () => openFireModal());
     $('#fire-csv', root).addEventListener('click', () => exportCSV('fire-kayitlari', rows, [
@@ -542,11 +530,10 @@ function renderStok(root) {
     const order = { TUKENDI: 0, KRITIK: 1, YETERLI: 2 };
     rows = sortRows(rows, ps.sort, { durum: s => order[s.durum] * 1e6 + s.kalan_stok / (s.kritik_stok_esigi || 1) });
 
-    const chip = (k, l) => `<button class="chip ${ps.durum === k ? 'active' : ''}" data-durum="${k}">${l}<span class="c">${counts[k]}</span></button>`;
     root.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <div class="chips">${chip('all', 'Tümü')}${chip('TUKENDI', 'Tükendi')}${chip('KRITIK', 'Kritik')}${chip('YETERLI', 'Yeterli')}</div>
+                ${chipBar([['all', 'Tümü'], ...Object.entries(DURUMLAR).map(([k, d]) => [k, d.label])], ps.durum, counts)}
                 <label class="search">${icon('search')}<input type="search" id="sq" placeholder="Ürün veya şube ara…" value="${esc(ps.q)}"></label>
                 <span class="spacer"></span>
                 <button class="btn btn-primary" id="stok-add">${icon('plus')}Stok hareketi</button>
@@ -572,9 +559,8 @@ function renderStok(root) {
                 base.length ? 'Filtreyi değiştirmeyi deneyin.' : 'Stok hareketleri sayfasından mal girişi yapın.')}
         </div>`;
 
-    $$('[data-durum]', root).forEach(b => b.addEventListener('click', () => { ps.durum = b.dataset.durum; renderStok(root); }));
-    const sq = $('#sq', root);
-    sq.addEventListener('input', () => { ps.q = sq.value; renderStok(root); const n = $('#sq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    bindChips(root, ps, 'durum', () => renderStok(root));
+    bindSearch(root, 'sq', ps, () => renderStok(root));
     $('#stok-add', root).addEventListener('click', () => openHareketModal());
     bindSort(root, ps, () => renderStok(root));
 }
@@ -591,11 +577,10 @@ function renderHareket(root) {
     if (ps.q) { const q = norm(ps.q); rows = rows.filter(h => norm(`${h.urun_adi} ${h.isletme_adi} ${h.aciklama}`).includes(q)); }
     rows = sortRows(rows, ps.sort);
 
-    const chip = (k, l) => `<button class="chip ${ps.tip === k ? 'active' : ''}" data-tip="${k}">${l}<span class="c">${counts[k]}</span></button>`;
     root.innerHTML = `
         <div class="card">
             <div class="toolbar">
-                <div class="chips">${chip('all', 'Tümü')}${chip('GIRIS', 'Giriş')}${chip('SATIS', 'Satış')}${chip('TUKETIM', 'Tüketim')}</div>
+                ${chipBar([['all', 'Tümü'], ...Object.entries(HAREKETLER).map(([k, x]) => [k, x.label])], ps.tip, counts)}
                 <label class="search">${icon('search')}<input type="search" id="hq" placeholder="Ürün veya şube ara…" value="${esc(ps.q)}"></label>
                 ${periodControl()}
                 <span class="spacer"></span>
@@ -622,9 +607,8 @@ function renderHareket(root) {
             : emptyState('swap', base.length ? 'Sonuç bulunamadı' : 'Bu dönemde hareket yok', base.length ? 'Filtreyi değiştirmeyi deneyin.' : 'İlk stok girişini yapın.')}
         </div>`;
 
-    $$('[data-tip]', root).forEach(b => b.addEventListener('click', () => { ps.tip = b.dataset.tip; renderHareket(root); }));
-    const hq = $('#hq', root);
-    hq.addEventListener('input', () => { ps.q = hq.value; renderHareket(root); const n = $('#hq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    bindChips(root, ps, 'tip', () => renderHareket(root));
+    bindSearch(root, 'hq', ps, () => renderHareket(root));
     $('#har-add', root).addEventListener('click', () => openHareketModal());
     $('#har-csv', root).addEventListener('click', () => exportCSV('stok-hareketleri', rows, [
         ['Tarih', h => new Date(h.islem_tarihi).toLocaleString('tr-TR')], ['Şube', 'isletme_adi'], ['Ürün', 'urun_adi'],
@@ -653,6 +637,7 @@ function renderUrun(root) {
             <div class="toolbar">
                 <label class="search">${icon('search')}<input type="search" id="uq" placeholder="Ürün veya kategori ara…" value="${esc(ps.q)}"></label>
                 <span class="spacer"></span>
+                <button class="btn btn-secondary" id="urun-import">${icon('upload')}Excel / CSV içe aktar</button>
                 <button class="btn btn-primary" id="urun-add">${icon('plus')}Yeni ürün</button>
             </div>
             ${rows.length ? `<div class="table-wrap"><table>
@@ -676,9 +661,9 @@ function renderUrun(root) {
             : emptyState('tag', 'Ürün bulunamadı', ps.q ? 'Aramayı değiştirmeyi deneyin.' : 'İlk ürününüzü ekleyin.')}
         </div>`;
 
-    const uq = $('#uq', root);
-    uq.addEventListener('input', () => { ps.q = uq.value; renderUrun(root); const n = $('#uq'); n.focus(); n.setSelectionRange(n.value.length, n.value.length); });
+    bindSearch(root, 'uq', ps, () => renderUrun(root));
     $('#urun-add', root).addEventListener('click', () => openUrunModal());
+    $('#urun-import', root).addEventListener('click', () => Importer.open());
     bindSort(root, ps, () => renderUrun(root));
 }
 
@@ -686,17 +671,7 @@ function renderUrun(root) {
 // CSV
 // =====================================================================
 function exportCSV(name, rows, cols) {
-    const cell = v => { const s = v === null || v === undefined ? '' : String(v); return /[";\n]/.test(s) ? `"${s.replace(/"/g, '""')}"` : s; };
-    const lines = [cols.map(c => cell(c[0])).join(';')].concat(rows.map(r => cols.map(([, f]) => {
-        const v = typeof f === 'function' ? f(r) : r[f];
-        return cell(typeof v === 'number' ? String(v).replace('.', ',') : v);
-    }).join(';')));
-    const blob = new Blob(['﻿' + lines.join('\n')], { type: 'text/csv;charset=utf-8' });
-    const a = document.createElement('a');
-    a.href = URL.createObjectURL(blob);
-    a.download = `${name}-${dayKey(Date.now())}.csv`;
-    a.click();
-    setTimeout(() => URL.revokeObjectURL(a.href), 1000);
+    downloadCSV(`${name}-${dayKey(Date.now())}.csv`, toCSV(rows, cols));
 }
 
 // =====================================================================
@@ -709,8 +684,8 @@ function fillSelect(sel, items, placeholder, value) {
 }
 const isletmeOpts = () => state.data.isletmeler.map(i => [i.id, i.ad]);
 const urunOpts = () => state.data.urunler.map(u => [u.id, u.urun_adi]);
-const stokOf = (i, u) => state.data.stok.find(s => String(s.isletme_id) === String(i) && String(s.urun_id) === String(u));
-const urunOf = id => state.data.urunler.find(u => String(u.id) === String(id));
+const stokOf = (i, u) => state.data.stok.find(s => sameId(s.isletme_id, i) && sameId(s.urun_id, u));
+const urunOf = id => state.data.urunler.find(u => sameId(u.id, id));
 
 function readNum(input) {
     const v = parseFloat(String(input.value).replace(',', '.'));
@@ -821,7 +796,6 @@ function openConnModal() {
     $('#conn-modal').showModal();
     $('#c-url').focus();
 }
-window.openConnModal = openConnModal;
 
 // ----- Kenar çubuğu (mobil) -----
 function openSidebar() { $('#sidebar').classList.add('open'); $('#scrim').classList.add('show'); }
@@ -842,6 +816,7 @@ function bindEvents() {
     $('#refresh-btn').addEventListener('click', () => reload());
     $('#quick-fire-btn').addEventListener('click', () => openFireModal());
     $('#conn-btn').addEventListener('click', openConnModal);
+    document.addEventListener('click', e => { if (e.target.closest('[data-action="open-conn"]')) openConnModal(); });
     $('#menu-btn').addEventListener('click', openSidebar);
     $('#sidebar-close').addEventListener('click', closeSidebar);
     $('#scrim').addEventListener('click', closeSidebar);
@@ -857,11 +832,11 @@ function bindEvents() {
         const t = e.target.closest('button');
         if (!t) return;
         if (t.dataset.delFire) {
-            const f = state.data.fireler.find(x => String(x.id) === t.dataset.delFire);
+            const f = state.data.fireler.find(x => sameId(x.id, t.dataset.delFire));
             if (!f || !await confirmDialog('Fire kaydı silinsin mi?', `${f.urun_adi} · ${fmtNum(f.fire_miktari)} ${f.birim} · ${f.isletme_adi}. Bu işlem geri alınamaz.`)) return;
             try { await DB.deleteFire(f.id); toast('Fire kaydı silindi'); await reload(); } catch (err) { toast(err.message, 'error'); }
         } else if (t.dataset.delHar) {
-            const h = state.data.hareketler.find(x => String(x.id) === t.dataset.delHar);
+            const h = state.data.hareketler.find(x => sameId(x.id, t.dataset.delHar));
             if (!h || !await confirmDialog('Hareket silinsin mi?', `${HAREKETLER[h.hareket_tipi].label}: ${h.urun_adi} · ${fmtNum(h.miktar)} ${h.birim} · ${h.isletme_adi}. Bu işlem geri alınamaz.`)) return;
             try { await DB.deleteHareket(h.id); toast('Hareket silindi'); await reload(); } catch (err) { toast(err.message, 'error'); }
         } else if (t.dataset.restock) {
@@ -942,8 +917,8 @@ function bindEvents() {
         if (!/^https?:\/\/.+/.test(url) || !key) {
             err.textContent = 'Geçerli bir Project URL ve anon key girin.'; err.hidden = false; return;
         }
-        if (/service_role/.test(atobSafe(key))) {
-            err.textContent = 'Bu bir service_role anahtarı. Tarayıcıda yalnızca anon public anahtarı kullanın.'; err.hidden = false; return;
+        if (key.startsWith('sb_secret_') || /service_role/.test(atobSafe(key))) {
+            err.textContent = 'Bu gizli (service_role / secret) bir anahtar. Tarayıcıda yalnızca anon veya publishable anahtarı kullanın.'; err.hidden = false; return;
         }
         const ok = await submitWith(f, async () => {
             try { await DB.connect(url, key); }

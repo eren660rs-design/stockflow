@@ -9,6 +9,7 @@ Kampüs kafeleri için stok, fire ve maliyet takip paneli. Supabase (PostgreSQL)
 - **Stok Durumu:** şube × ürün bazında anlık stok, eşik çubuğu ve durum (Tükendi / Kritik / Yeterli). Tek tıkla stok girişi yapılabilir.
 - **Stok Hareketleri:** giriş, satış ve tüketim kayıtları.
 - **Ürünler:** ürün ekleme ve düzenleme (maliyet, birim, kritik eşik).
+- **Excel / CSV içe aktarma:** `.xlsx`, `.xls` veya `.csv` dosyasından toplu ürün yükleme. Excel sayfaları önce CSV'ye dönüştürülür (dönüştürülmüş CSV indirilebilir). Sütunlar otomatik eşlenir, gerekirse elle değiştirilebilir. Satırlar içe aktarmadan önce doğrulanıp önizlenir. Aynı adlı ürünler güncellenir, eksik kategoriler oluşturulur, isteğe bağlı *Şube* ve *Stok* sütunları başlangıç stoğu olarak giriş hareketi yazar. Ürünler sayfasından örnek şablon indirilebilir.
 - **Şube filtresi:** tüm sayfalarda geçerlidir.
 - **Stok koruması:** stoktan fazla satış, tüketim veya fire girişi veritabanı trigger'ı ile reddedilir.
 - **Realtime:** başka bir cihazdan girilen kayıt panelde anında görünür.
@@ -53,6 +54,7 @@ Ardından tarayıcıda `http://localhost:5173` adresini açın. İstediğiniz st
 | `config.js` | Supabase URL ve anon anahtarı |
 | `db.js` | Veri katmanı: Supabase sorguları ve demo modu |
 | `app.js` | Sayfalar, grafikler, formlar ve olaylar |
+| `import.js` | Excel → CSV dönüştürme, sütun eşleme ve toplu içe aktarma |
 | `sql/` | Şema, örnek veri ve rapor sorguları |
 
 ## Veri modeli

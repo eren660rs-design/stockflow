@@ -308,6 +308,7 @@ drop policy if exists "all_stok_hareketleri"   on public.stok_hareketleri;
 drop policy if exists "all_fire_kayitlari"     on public.fire_kayitlari;
 drop policy if exists "isletmeler_okuma"       on public.isletmeler;
 drop policy if exists "kategoriler_okuma"      on public.kategoriler;
+drop policy if exists "kategoriler_ekleme"     on public.kategoriler;
 drop policy if exists "urunler_okuma"          on public.urunler;
 drop policy if exists "urunler_ekleme"         on public.urunler;
 drop policy if exists "urunler_guncelleme"     on public.urunler;
@@ -320,6 +321,7 @@ drop policy if exists "fire_silme"             on public.fire_kayitlari;
 
 create policy "isletmeler_okuma"   on public.isletmeler       for select to anon, authenticated using (true);
 create policy "kategoriler_okuma"  on public.kategoriler      for select to anon, authenticated using (true);
+create policy "kategoriler_ekleme" on public.kategoriler      for insert to anon, authenticated with check (true);
 create policy "urunler_okuma"      on public.urunler          for select to anon, authenticated using (true);
 create policy "urunler_ekleme"     on public.urunler          for insert to anon, authenticated with check (true);
 create policy "urunler_guncelleme" on public.urunler          for update to anon, authenticated using (true) with check (true);
@@ -331,7 +333,28 @@ create policy "fire_ekleme"        on public.fire_kayitlari   for insert to anon
 create policy "fire_silme"         on public.fire_kayitlari   for delete to anon, authenticated using (true);
 
 -- ---------------------------------------------------------------------
--- 5. REALTIME (panel, başka cihazdan girilen kayıtları anında görür)
+-- 5. ERİŞİM İZİNLERİ (GRANT)
+-- Yeni Supabase projeleri public şemadaki tablolara otomatik izin
+-- vermez; RLS politikaları ancak bu izinlerle birlikte çalışır.
+-- ---------------------------------------------------------------------
+grant usage on schema public to anon, authenticated;
+
+grant select on public.isletmeler, public.kategoriler, public.urunler,
+                public.stok_hareketleri, public.fire_kayitlari
+    to anon, authenticated;
+grant insert                on public.kategoriler      to anon, authenticated;
+grant insert, update        on public.urunler          to anon, authenticated;
+grant insert, delete        on public.stok_hareketleri to anon, authenticated;
+grant insert, delete        on public.fire_kayitlari   to anon, authenticated;
+
+grant select on public.v_guncel_stok_durumu, public.v_fire_detay, public.v_hareket_detay,
+                public.v_urun_fire_maliyeti, public.v_kafe_fire_orani, public.v_fire_neden_dagilimi
+    to anon, authenticated;
+
+grant execute on function public.stok_miktari(bigint, bigint) to anon, authenticated;
+
+-- ---------------------------------------------------------------------
+-- 6. REALTIME (panel, başka cihazdan girilen kayıtları anında görür)
 -- ---------------------------------------------------------------------
 do $$
 declare t text;

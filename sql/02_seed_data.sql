@@ -8,9 +8,8 @@ truncate public.fire_kayitlari, public.stok_hareketleri, public.urunler,
          public.kategoriler, public.isletmeler restart identity cascade;
 
 insert into public.isletmeler (ad, konum) values
-('Merkez Kütüphane Kafe',     'A Blok Giriş'),
-('Mühendislik Kantin & Kafe', 'B Blok Zemin'),
-('Bahçe Pastane & Kahve',     'Kampüs Meydanı');
+('Febrero Kafe',  'Teras'),
+('Casuel Bakery', 'Balçova');
 
 insert into public.kategoriler (kategori_adi) values
 ('Süt ve Süt Ürünleri'),
@@ -46,13 +45,13 @@ insert into public.stok_hareketleri (isletme_id, urun_id, hareket_tipi, miktar, 
 (2, 4, 'GIRIS', 30,  now() - interval '5 days',  null),
 (2, 10,'GIRIS', 30,  now() - interval '10 days', null),
 (2, 7, 'GIRIS', 5,   now() - interval '17 days', 'Kavurucu teslimatı'),
-(3, 6, 'GIRIS', 25,  now() - interval '15 days', null),
-(3, 6, 'GIRIS', 15,  now() - interval '4 days',  null),
-(3, 5, 'GIRIS', 24,  now() - interval '14 days', null),
-(3, 5, 'GIRIS', 12,  now() - interval '5 days',  null),
-(3, 8, 'GIRIS', 6,   now() - interval '20 days', null),
-(3, 3, 'GIRIS', 30,  now() - interval '12 days', 'Fırın siparişi'),
-(3, 10,'GIRIS', 25,  now() - interval '9 days',  null);
+(2, 6, 'GIRIS', 25,  now() - interval '15 days', null),
+(2, 6, 'GIRIS', 15,  now() - interval '4 days',  null),
+(2, 5, 'GIRIS', 24,  now() - interval '14 days', null),
+(2, 5, 'GIRIS', 12,  now() - interval '5 days',  null),
+(2, 8, 'GIRIS', 6,   now() - interval '20 days', null),
+(2, 3, 'GIRIS', 30,  now() - interval '12 days', 'Fırın siparişi'),
+(2, 10,'GIRIS', 25,  now() - interval '9 days',  null);
 
 -- Sonra satış ve tüketimler
 insert into public.stok_hareketleri (isletme_id, urun_id, hareket_tipi, miktar, islem_tarihi) values
@@ -70,13 +69,13 @@ insert into public.stok_hareketleri (isletme_id, urun_id, hareket_tipi, miktar, 
 (2, 4, 'SATIS',   20,  now() - interval '2 days'),
 (2, 10,'SATIS',   18,  now() - interval '3 days'),
 (2, 7, 'TUKETIM', 2.5, now() - interval '6 days'),
-(3, 6, 'SATIS',   15,  now() - interval '10 days'),
-(3, 6, 'SATIS',   10,  now() - interval '2 days'),
-(3, 5, 'SATIS',   16,  now() - interval '8 days'),
-(3, 5, 'SATIS',   9,   now() - interval '1 day'),
-(3, 8, 'TUKETIM', 2,   now() - interval '9 days'),
-(3, 3, 'SATIS',   24,  now() - interval '6 days'),
-(3, 10,'SATIS',   14,  now() - interval '3 days');
+(2, 6, 'SATIS',   15,  now() - interval '10 days'),
+(2, 6, 'SATIS',   10,  now() - interval '2 days'),
+(2, 5, 'SATIS',   16,  now() - interval '8 days'),
+(2, 5, 'SATIS',   9,   now() - interval '1 day'),
+(2, 8, 'TUKETIM', 2,   now() - interval '9 days'),
+(2, 3, 'SATIS',   24,  now() - interval '6 days'),
+(2, 10,'SATIS',   14,  now() - interval '3 days');
 
 -- Fire kayıtları
 insert into public.fire_kayitlari (isletme_id, urun_id, fire_miktari, fire_nedeni, aciklama, kayit_tarihi) values
@@ -92,7 +91,7 @@ insert into public.fire_kayitlari (isletme_id, urun_id, fire_miktari, fire_neden
 (2, 4, 8,   'GUN_SONU_KALAN',   'Gün sonu bayatlayan sandviçler',  now() - interval '8 days'),
 (2, 4, 4,   'GUN_SONU_KALAN',   null,                              now() - interval '1 day'),
 (2, 10,4,   'GUN_SONU_KALAN',   null,                              now() - interval '2 days'),
-(3, 6, 4,   'BOZULMA',          'Krema bozulması',                 now() - interval '9 days'),
-(3, 5, 5,   'GUN_SONU_KALAN',   'Hafta sonu kalan dilimler',       now() - interval '6 days'),
-(3, 8, 1.5, 'SKT_GECTI',        'Açılmış şişe SKT geçti',          now() - interval '3 days'),
-(3, 3, 6,   'GUN_SONU_KALAN',   null,                              now() - interval '5 days');
+(2, 6, 4,   'BOZULMA',          'Krema bozulması',                 now() - interval '9 days'),
+(2, 5, 5,   'GUN_SONU_KALAN',   'Hafta sonu kalan dilimler',       now() - interval '6 days'),
+(2, 8, 1.5, 'SKT_GECTI',        'Açılmış şişe SKT geçti',          now() - interval '3 days'),
+(2, 3, 6,   'GUN_SONU_KALAN',   null,                              now() - interval '5 days');
